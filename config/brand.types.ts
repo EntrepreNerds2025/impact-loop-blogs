@@ -33,6 +33,7 @@ export interface BrandConfig {
     copyright: string;
     legalLinks: NavLink[];
   };
+  ga4Id: string; // GA4 Measurement ID e.g. G-XXXXXXXXXX
   defaultAuthor: string;
   organization: {
     name: string;

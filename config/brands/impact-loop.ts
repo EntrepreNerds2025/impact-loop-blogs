@@ -48,6 +48,7 @@ export const impactLoopBrand: BrandConfig = {
       { label: 'Terms', href: 'https://impactloop.ca/terms' },
     ],
   },
+  ga4Id: 'G-85JD3CZ1FD',
   defaultAuthor: 'rovonn-russell',
   organization: {
     name: 'Impact Loop',

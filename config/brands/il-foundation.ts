@@ -45,6 +45,7 @@ export const ilFoundationBrand: BrandConfig = {
       { label: 'Privacy', href: 'https://impactloop.ca/privacy' },
     ],
   },
+  ga4Id: 'G-T4YD63XELM',
   defaultAuthor: 'rovonn-russell',
   organization: {
     name: 'IL Foundation',

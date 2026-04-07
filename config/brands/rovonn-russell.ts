@@ -48,6 +48,7 @@ export const rovonnRussellBrand: BrandConfig = {
       { label: 'Privacy', href: 'https://rovonnrussell.com/privacy' },
     ],
   },
+  ga4Id: 'G-VG1NB2L60C',
   defaultAuthor: 'rovonn-russell',
   organization: {
     name: 'Rovonn Russell',

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Script from 'next/script';
 import { getActiveBrandKey, BRAND } from '@/config/brand';
 import { organizationJsonLd } from '@/lib/seo';
 import Header from '@/components/Header';
@@ -35,6 +36,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
+        {/* GA4 — loads after page is interactive, does not block render */}
+        <Script
+          src={`https://www.googletagmanager.com/gtag/js?id=${BRAND.ga4Id}`}
+          strategy="afterInteractive"
+        />
+        <Script id="ga4-init" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${BRAND.ga4Id}', { page_path: window.location.pathname });
+          `}
+        </Script>
         <Header />
         <main className="min-h-[60vh]">{children}</main>
         <Footer />

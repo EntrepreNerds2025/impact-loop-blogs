@@ -51,6 +51,7 @@ export const dreamStreamsBrand: BrandConfig = {
       { label: 'Privacy', href: 'https://dreamstreams.ca/privacy' },
     ],
   },
+  ga4Id: 'G-5XGS8CK7RL',
   defaultAuthor: 'rovonn-russell',
   organization: {
     name: 'Dream Streams',
