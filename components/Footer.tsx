@@ -1,6 +1,6 @@
 import { BRAND } from '@/config/brand';
 
-export function Footer() {
+export default function Footer() {
   return (
     <footer className="mt-24 border-t border-brand-border bg-brand-surface">
       <div className="container mx-auto py-12">

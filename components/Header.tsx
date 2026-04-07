@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { BRAND } from '@/config/brand';
 
-export function Header() {
+export default function Header() {
   return (
     <header className="border-b border-brand-border bg-brand-bg">
       <div className="container mx-auto flex items-center justify-between py-5">
