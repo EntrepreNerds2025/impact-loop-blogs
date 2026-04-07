@@ -49,6 +49,7 @@ export const impactLoopBrand: BrandConfig = {
     ],
   },
   ga4Id: 'G-85JD3CZ1FD',
+  gscVerification: 'DPWQuZmcSgQZiz2SuO2wLKO67sSzgytfOKiRYsqex9M',
   defaultAuthor: 'rovonn-russell',
   organization: {
     name: 'Impact Loop',

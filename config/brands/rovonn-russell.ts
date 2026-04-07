@@ -49,6 +49,7 @@ export const rovonnRussellBrand: BrandConfig = {
     ],
   },
   ga4Id: 'G-VG1NB2L60C',
+  gscVerification: 'CRMvCS00gRo39gzCwTwjxL_ClpKs02woZz3hjQMiKTw',
   defaultAuthor: 'rovonn-russell',
   organization: {
     name: 'Rovonn Russell',

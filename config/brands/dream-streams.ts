@@ -52,6 +52,7 @@ export const dreamStreamsBrand: BrandConfig = {
     ],
   },
   ga4Id: 'G-5XGS8CK7RL',
+  gscVerification: 'L1CWWPZ9iPa6MlpzmOhXgqk9_OyM8PS1cGTk_CkVtPk',
   defaultAuthor: 'rovonn-russell',
   organization: {
     name: 'Dream Streams',

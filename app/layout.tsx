@@ -19,6 +19,9 @@ export const metadata: Metadata = {
     siteName: `${BRAND.name} Blog`,
     locale: BRAND.locale,
   },
+  verification: {
+    google: BRAND.gscVerification,
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

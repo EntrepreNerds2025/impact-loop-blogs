@@ -34,6 +34,7 @@ export interface BrandConfig {
     legalLinks: NavLink[];
   };
   ga4Id: string; // GA4 Measurement ID e.g. G-XXXXXXXXXX
+  gscVerification: string; // Google Search Console verification content value
   defaultAuthor: string;
   organization: {
     name: string;

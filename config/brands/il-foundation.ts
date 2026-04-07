@@ -12,7 +12,7 @@ export const ilFoundationBrand: BrandConfig = {
   tagline: 'Youth storytelling that changes communities',
   description:
     'The IL Foundation runs youth media cohorts that turn lived experience into community-changing stories.',
-  domain: 'blog.ilfoundation.ca',
+  domain: 'blog.impactloopfoundation.ca',
   mainSiteUrl: 'https://impactloop.ca/foundation',
   locale: 'en-CA',
   fonts: {
@@ -46,6 +46,7 @@ export const ilFoundationBrand: BrandConfig = {
     ],
   },
   ga4Id: 'G-T4YD63XELM',
+  gscVerification: 'mC2NLJAZ6dHtNz_NLd_sBMXX4ktYEz0YheoQhp9OOJ4',
   defaultAuthor: 'rovonn-russell',
   organization: {
     name: 'IL Foundation',
