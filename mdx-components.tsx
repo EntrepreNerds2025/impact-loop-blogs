@@ -2,6 +2,7 @@ import type { MDXComponents } from 'mdx/types';
 import Link from 'next/link';
 import ImageOptimized from '@/components/ImageOptimized';
 import CTABlock from '@/components/CTABlock';
+import PricingCallout from '@/components/brands/dream-streams/PricingCallout';
 
 export const mdxComponents: MDXComponents = {
   a: ({ href, children, ...rest }) => {
@@ -21,6 +22,7 @@ export const mdxComponents: MDXComponents = {
   },
   img: (props: any) => <ImageOptimized {...props} width={1200} height={700} />,
   CTABlock,
+  PricingCallout,
 };
 
 export function useMDXComponents(components: MDXComponents): MDXComponents {
