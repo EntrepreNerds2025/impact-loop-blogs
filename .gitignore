@@ -13,3 +13,7 @@ dist/
 .vscode
 *.tsbuildinfo
 next-env.d.ts
+
+# Sanity Studio
+studio/node_modules/
+studio/dist/
