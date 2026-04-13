@@ -1,12 +1,13 @@
 import { notFound } from 'next/navigation';
-import { getCategories, getPostsByCategory } from '@/lib/posts';
+import { getCategoriesFromSanity, getPostsByCategoryFromSanity } from '@/lib/sanityPosts';
 import PostCard from '@/components/PostCard';
 import { BRAND } from '@/config/brand';
 
 export const revalidate = 60;
 
-export function generateStaticParams() {
-  return getCategories().map((c) => ({ category: encodeURIComponent(c.toLowerCase()) }));
+export async function generateStaticParams() {
+  const categories = await getCategoriesFromSanity();
+  return categories.map((category) => ({ category: encodeURIComponent(category.toLowerCase()) }));
 }
 
 export function generateMetadata({ params }: { params: { category: string } }) {
@@ -17,9 +18,9 @@ export function generateMetadata({ params }: { params: { category: string } }) {
   };
 }
 
-export default function CategoryPage({ params }: { params: { category: string } }) {
+export default async function CategoryPage({ params }: { params: { category: string } }) {
   const cat = decodeURIComponent(params.category);
-  const posts = getPostsByCategory(cat);
+  const posts = await getPostsByCategoryFromSanity(cat);
   if (posts.length === 0) notFound();
   return (
     <div className="max-w-6xl mx-auto px-4 py-12">

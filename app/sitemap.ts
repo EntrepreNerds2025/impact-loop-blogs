@@ -1,11 +1,13 @@
 import type { MetadataRoute } from 'next';
-import { getAllPosts, getCategories } from '@/lib/posts';
+import { getAllPostsFromSanity, getCategoriesFromSanity } from '@/lib/sanityPosts';
 import { BRAND } from '@/config/brand';
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = `https://${BRAND.domain}`;
-  const posts = getAllPosts();
-  const cats = getCategories();
+  const [posts, cats] = await Promise.all([
+    getAllPostsFromSanity(),
+    getCategoriesFromSanity(),
+  ]);
   const now = new Date();
 
   return [

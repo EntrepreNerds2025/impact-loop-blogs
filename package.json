@@ -15,35 +15,38 @@
     "type-check": "tsc --noEmit",
     "studio:dev": "cd studio && npx sanity dev",
     "studio:build": "cd studio && npx sanity build",
-    "studio:deploy": "cd studio && npx sanity deploy"
+    "studio:deploy": "cd studio && npx sanity deploy",
+    "studio:login": "cd studio && npx sanity login",
+    "studio:projects": "cd studio && npx sanity projects list",
+    "studio:import": "cd studio && npx sanity dataset import ../sanity/import.ndjson production --replace"
   },
   "dependencies": {
     "@sanity/client": "^7.20.0",
     "@sanity/image-url": "^2.1.1",
+    "clsx": "2.1.1",
+    "feed": "4.2.2",
+    "gray-matter": "4.0.3",
     "next": "14.2.33",
+    "next-mdx-remote": "6.0.0",
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "next-mdx-remote": "6.0.0",
-    "gray-matter": "4.0.3",
     "reading-time": "1.5.0",
-    "rehype-slug": "6.0.0",
     "rehype-autolink-headings": "7.1.0",
     "rehype-pretty-code": "0.13.2",
+    "rehype-slug": "6.0.0",
     "remark-gfm": "4.0.0",
-    "shiki": "1.22.0",
-    "feed": "4.2.2",
-    "clsx": "2.1.1"
+    "shiki": "1.22.0"
   },
   "devDependencies": {
     "@types/node": "20.16.11",
     "@types/react": "18.3.11",
     "@types/react-dom": "18.3.0",
     "autoprefixer": "10.4.20",
+    "eslint": "8.57.1",
+    "eslint-config-next": "14.2.33",
     "postcss": "8.4.47",
     "tailwindcss": "3.4.13",
-    "typescript": "5.6.3",
-    "eslint": "8.57.1",
-    "eslint-config-next": "14.2.33"
+    "typescript": "5.6.3"
   },
   "engines": {
     "node": ">=18.17.0"

@@ -1,6 +1,5 @@
 import { createClient } from '@sanity/client';
 import imageUrlBuilder from '@sanity/image-url';
-import type { SanityImageSource } from '@sanity/image-url/lib/types/types';
 
 export const sanityConfig = {
   projectId: 'ngkvlovw',
@@ -24,6 +23,6 @@ export const publicClient = createClient({
 // Image URL builder
 const builder = imageUrlBuilder(sanityClient);
 
-export function urlFor(source: SanityImageSource) {
-  return builder.image(source);
+export function urlFor(source: unknown) {
+  return builder.image(source as any);
 }

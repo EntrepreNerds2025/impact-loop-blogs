@@ -1,9 +1,26 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { getAuthor } from '@/lib/authors';
+import type { PostAuthorProfile } from '@/types/post';
 
-export default function AuthorBio({ authorSlug }: { authorSlug: string }) {
-  const a = getAuthor(authorSlug);
+export default function AuthorBio({
+  authorSlug,
+  author,
+}: {
+  authorSlug?: string;
+  author?: PostAuthorProfile;
+}) {
+  const fallback = getAuthor(authorSlug ?? 'rovonn-russell');
+  const a = author
+    ? {
+        name: author.name,
+        title: author.title ?? '',
+        bio: author.bio ?? '',
+        image: author.image ?? '',
+        links: author.links?.map((item) => ({ label: item.label, href: item.href })) ?? [],
+      }
+    : fallback;
+
   if (!a) return null;
   return (
     <aside className="mt-12 p-6 rounded-xl border border-brand-border bg-brand-surface flex flex-col sm:flex-row gap-5 items-start">

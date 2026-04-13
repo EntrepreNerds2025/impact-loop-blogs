@@ -15,6 +15,7 @@ export function buildPostMetadata(post: Post): Metadata {
   const url = `https://${brand.domain}/blog/${post.frontmatter.slug}`;
   const title = post.frontmatter.seoTitle ?? post.frontmatter.title;
   const description = post.frontmatter.metaDescription ?? post.frontmatter.excerpt;
+  const authorName = post.frontmatter.authorName ?? post.authorProfile?.name ?? ROVONN.name;
   const image = post.frontmatter.featuredImage
     ? post.frontmatter.featuredImage.startsWith('http')
       ? post.frontmatter.featuredImage
@@ -34,7 +35,7 @@ export function buildPostMetadata(post: Post): Metadata {
       images: image ? [{ url: image }] : undefined,
       publishedTime: post.frontmatter.date,
       modifiedTime: post.frontmatter.lastModified ?? post.frontmatter.date,
-      authors: [ROVONN.url],
+      authors: [authorName],
     },
     twitter: {
       card: 'summary_large_image',
@@ -48,6 +49,9 @@ export function buildPostMetadata(post: Post): Metadata {
 export function articleJsonLd(post: Post) {
   const brand = getBrand(post.brand);
   const url = `https://${brand.domain}/blog/${post.frontmatter.slug}`;
+  const authorName = post.frontmatter.authorName ?? post.authorProfile?.name ?? ROVONN.name;
+  const authorUrl =
+    post.authorProfile?.links?.[0]?.href || ROVONN.url;
   return {
     '@context': 'https://schema.org',
     '@type': 'Article',
@@ -58,8 +62,8 @@ export function articleJsonLd(post: Post) {
     dateModified: post.frontmatter.lastModified ?? post.frontmatter.date,
     author: {
       '@type': 'Person',
-      name: ROVONN.name,
-      url: ROVONN.url,
+      name: authorName,
+      url: authorUrl,
       jobTitle: ROVONN.jobTitle,
       worksFor: { '@type': 'Organization', name: ROVONN.worksFor },
       sameAs: ROVONN.sameAs,

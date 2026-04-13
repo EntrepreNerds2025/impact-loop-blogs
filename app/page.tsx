@@ -1,13 +1,13 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { getAllPosts } from '@/lib/posts';
+import { getAllPostsFromSanity } from '@/lib/sanityPosts';
 import { BRAND } from '@/config/brand';
 import PostCard from '@/components/PostCard';
 
 export const revalidate = 60;
 
-export default function HomePage() {
-  const posts = getAllPosts();
+export default async function HomePage() {
+  const posts = await getAllPostsFromSanity();
   const [hero, ...rest] = posts;
 
   return (
@@ -42,7 +42,7 @@ export default function HomePage() {
             )}
             <div className="p-8 md:p-12 flex flex-col justify-center">
               <p className="text-xs uppercase tracking-widest text-brand-primary mb-3">
-                Featured · {hero.frontmatter.category}
+                Featured | {hero.frontmatter.category}
               </p>
               <h2 className="text-3xl md:text-4xl font-display font-semibold mb-4 group-hover:text-brand-primary transition-colors">
                 {hero.frontmatter.title}
@@ -57,8 +57,8 @@ export default function HomePage() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {rest.map((p) => (
-          <PostCard key={p.frontmatter.slug} post={p} />
+        {rest.map((post) => (
+          <PostCard key={post.frontmatter.slug} post={post} />
         ))}
       </div>
 
@@ -70,3 +70,4 @@ export default function HomePage() {
     </div>
   );
 }
+
