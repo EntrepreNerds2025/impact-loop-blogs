@@ -1,0 +1,92 @@
+Use this repository's AGENTS.md as the source of truth and execute the AI autoblog workflow end-to-end.
+Before selecting or generating the blog, read docs/CONTENT_STRATEGY_AND_KEYWORD_MAP.md and map the request to the closest cluster, primary keyword, audience, intent, CTA, and sidebar angle.
+
+Non-negotiable operating rules:
+1. Follow AGENTS.md exactly.
+2. Use POST /api/ai/blog with x-ai-secret auth.
+3. Start with a dry run first.
+4. Create a real draft only after quality gate passes.
+5. Do not publish until I explicitly say "publish now".
+6. Never expose or print secrets from .env.local.
+7. Prefer topics from docs/CONTENT_STRATEGY_AND_KEYWORD_MAP.md unless I give a specific topic.
+8. Include current source-backed claims when writing about benchmarks, trends, regulations, AI/search changes, fundraising performance, or corporate responsibility.
+9. If provider billing fails, continue with local/offline generation mode and still complete the draft workflow.
+
+Natural-language mode:
+1. If I speak casually, infer payload fields from my message.
+2. Fill defaults when fields are missing:
+   - targetKeyword = topic
+   - category = infer from docs/CONTENT_STRATEGY_AND_KEYWORD_MAP.md, fallback to Insights
+   - tone = Direct, practical, non-hype authority
+   - minSeoScore = 85
+   - minToneScore = 85
+3. If required fields are unclear, ask one concise follow-up and continue.
+
+Task inputs:
+- Brand: <impact-loop | rovonn-russell | dream-streams | il-foundation>
+- Topic: <TOPIC>
+- Target keyword: <KEYWORD>
+- Category: <CATEGORY>
+- Tone: <TONE>
+- Notes: <OPTIONAL_NOTES>
+
+Execution sequence:
+1. Dry run generate request:
+{
+  "action": "generate",
+  "brand": "<BRAND>",
+  "topic": "<TOPIC>",
+  "targetKeyword": "<KEYWORD>",
+  "category": "<CATEGORY>",
+  "tone": "<TONE>",
+  "notes": "<OPTIONAL_NOTES>",
+  "minSeoScore": 85,
+  "minToneScore": 85,
+  "dryRun": true,
+  "publish": false
+}
+
+2. If qualityGate.passed is false:
+- Regenerate with improved prompt constraints.
+- Repeat dry run until gate passes.
+
+3. Create real draft:
+{
+  "action": "generate",
+  "brand": "<BRAND>",
+  "topic": "<TOPIC>",
+  "targetKeyword": "<KEYWORD>",
+  "category": "<CATEGORY>",
+  "tone": "<TONE>",
+  "notes": "<OPTIONAL_NOTES>",
+  "minSeoScore": 85,
+  "minToneScore": 85,
+  "dryRun": false,
+  "publish": false
+}
+
+4. Return this exact summary to me:
+- Title
+- Slug
+- Draft ID
+- Quality (seoScore, toneScore, issues)
+- Quality Gate (passed, reasons)
+- Ranking Estimate (score, tier, confidence, expectedWindow, risks, recommendations)
+- Links (expectedLiveUrl, localViewUrl, studioEditUrl if present)
+
+5. Wait for my approval.
+
+6. When I say "publish now", publish this draft:
+{
+  "action": "publish",
+  "draftId": "<DRAFT_ID>",
+  "minSeoScore": 85,
+  "minToneScore": 85,
+  "enforceQualityGate": true
+}
+
+7. After publish, return:
+- Published ID
+- Live URL
+- Category URL
+- Whether publish was blocked by quality gate

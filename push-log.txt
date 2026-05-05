@@ -1,0 +1,25 @@
+=== START 2026-05-05 10:40:50.44 === 
+From https://github.com/EntrepreNerds2025/impact-loop-blogs
+ * branch            main       -> FETCH_HEAD
+Already up to date.
+ M .env.example
+ M README.md
+ M components/PostLayout.tsx
+ M components/PostSidebar.tsx
+ M config/brands/rovonn-russell.ts
+ M lib/aiAutoblog.ts
+ M package.json
+ M types/post.ts
+?? AGENTS.md
+?? CO_WORKER_PROMPT.txt
+?? PUSH-TO-GITHUB.bat
+?? content/impact-loop/adapt-for-nonprofits-tailoring-ai-without-losing-the-mission.mdx
+?? docs/
+?? ops/
+?? push-log.txt
+?? sanity/import.ndjson
+?? sanity/migrate.mjs
+?? scripts/
+?? studio/.sanity/
+?? studio/package-lock.json
+ 

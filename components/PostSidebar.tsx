@@ -12,12 +12,14 @@ interface PostSidebarProps {
   sidebarTitle?: string;
 }
 
-function Divider() {
-  return <div className="h-px bg-brand-border" />;
-}
-
-function SidebarCard({ children }: { children: React.ReactNode }) {
-  return <section className="space-y-3">{children}</section>;
+function SidebarCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <section
+      className={`space-y-3 rounded-2xl border border-brand-border bg-brand-bg p-5 shadow-[0_14px_45px_hsl(var(--brand-text)/0.06)] ${className}`}
+    >
+      {children}
+    </section>
+  );
 }
 
 function renderModule(
@@ -29,25 +31,27 @@ function renderModule(
 ) {
   if (module._type === 'sidebarImageCta') {
     return (
-      <SidebarCard>
+      <SidebarCard className="overflow-hidden p-0">
         {module.imageUrl && (
-          <a href={module.buttonHref || BRAND.cta.primary.href} className="block overflow-hidden rounded-lg border border-brand-border">
+          <a href={module.buttonHref || BRAND.cta.primary.href} className="block bg-brand-muted">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={module.imageUrl} alt={module.imageAlt || module.heading || 'Sidebar image'} className="w-full object-cover" />
           </a>
         )}
-        {module.heading && (
-          <h3 className="font-display text-xl font-semibold">{module.heading}</h3>
-        )}
-        {module.body && <p className="text-sm text-brand-text-muted">{module.body}</p>}
-        {module.buttonLabel && module.buttonHref && (
-          <a
-            href={module.buttonHref}
-            className="inline-block rounded-full bg-brand-primary px-4 py-2 text-xs font-semibold uppercase tracking-wider text-brand-primary-foreground"
-          >
-            {module.buttonLabel}
-          </a>
-        )}
+        <div className="space-y-3 p-5">
+          {module.heading && (
+            <h3 className="font-display text-xl font-semibold leading-tight">{module.heading}</h3>
+          )}
+          {module.body && <p className="text-sm leading-6 text-brand-text-muted">{module.body}</p>}
+          {module.buttonLabel && module.buttonHref && (
+            <a
+              href={module.buttonHref}
+              className="inline-block rounded-full bg-brand-primary px-4 py-2 text-xs font-semibold uppercase tracking-wider text-brand-primary-foreground"
+            >
+              {module.buttonLabel}
+            </a>
+          )}
+        </div>
       </SidebarCard>
     );
   }
@@ -55,20 +59,20 @@ function renderModule(
   if (module._type === 'sidebarPromo') {
     const isDark = module.theme === 'dark';
     return (
-      <SidebarCard>
-        <div
-          className={`rounded-xl border px-4 py-5 ${
-            isDark
-              ? 'border-brand-text bg-brand-text text-brand-primary-foreground'
-              : 'border-brand-border bg-brand-surface text-brand-text'
-          }`}
-        >
+      <SidebarCard
+        className={
+          isDark
+            ? 'border-brand-text bg-brand-text text-brand-primary-foreground'
+            : 'bg-brand-surface text-brand-text'
+        }
+      >
+        <div>
           {module.eyebrow && (
-            <p className="mb-2 text-[10px] uppercase tracking-[0.2em] text-brand-primary">
+            <p className={`mb-2 text-[10px] uppercase tracking-[0.2em] ${isDark ? 'text-brand-primary-foreground/70' : 'text-brand-primary'}`}>
               {module.eyebrow}
             </p>
           )}
-          <h3 className="font-display text-lg leading-tight">{module.heading}</h3>
+          {module.heading && <h3 className={`font-display text-lg leading-tight ${isDark ? 'text-brand-primary-foreground' : ''}`}>{module.heading}</h3>}
           {module.body && (
             <p className={`mt-2 text-sm ${isDark ? 'text-brand-primary-foreground/75' : 'text-brand-text-muted'}`}>
               {module.body}
@@ -113,7 +117,7 @@ function renderModule(
 
   if (module._type === 'sidebarNewsletter') {
     return (
-      <SidebarCard>
+      <SidebarCard className="bg-brand-muted/45">
         <h3 className="text-center font-display text-xl font-semibold">
           {module.title || 'Stay in the Loop'}
         </h3>
@@ -248,19 +252,15 @@ export default function PostSidebar({
 
   return (
     <aside className="lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-auto">
-      <div className="space-y-5 rounded-2xl border border-brand-border bg-brand-muted/40 p-5">
+      <div className="space-y-4">
         {sidebarTitle && (
-          <>
+          <div className="rounded-2xl border border-brand-border bg-brand-bg px-5 py-4 shadow-[0_14px_45px_hsl(var(--brand-text)/0.05)]">
             <h2 className="font-display text-lg font-semibold">{sidebarTitle}</h2>
-            <Divider />
-          </>
+          </div>
         )}
         {activeModules.map((module, index) => (
           <div key={module._key}>
-            {index > 0 && <Divider />}
-            <div className={index > 0 ? 'pt-5' : ''}>
-              {renderModule(module, recentPosts, categories, headings, currentSlug)}
-            </div>
+            {renderModule(module, recentPosts, categories, headings, currentSlug)}
           </div>
         ))}
       </div>

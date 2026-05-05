@@ -5,7 +5,8 @@ import { sanityConfig } from '@/sanity/client';
 import type { BrandKey, PortableTextNode } from '@/types/post';
 
 type JsonRecord = Record<string, unknown>;
-type AIProvider = 'openai' | 'anthropic';
+type AIProvider = 'openai' | 'anthropic' | 'local';
+type GenerationMode = 'ai' | 'local';
 
 export interface GenerateAutoBlogRequest {
   brand: BrandKey;
@@ -64,6 +65,7 @@ export interface GenerateAutoBlogResult {
   title: string;
   slug: string;
   category: string;
+  generationMode?: GenerationMode;
   draftId?: string;
   publishedId?: string;
   published: boolean;
@@ -158,11 +160,13 @@ const asStringArray = (value: unknown) => (Array.isArray(value) ? value.map(asSt
 
 function getAiProvider(): AIProvider {
   const raw = asString(process.env.AI_PROVIDER).toLowerCase();
+  if (raw === 'local' || raw === 'offline') return 'local';
   if (raw === 'anthropic') return 'anthropic';
   return 'openai';
 }
 
 function getAiApiKey(provider: AIProvider): string {
+  if (provider === 'local') return '';
   if (provider === 'anthropic') {
     const keyValue = process.env.ANTHROPIC_API_KEY;
     if (!keyValue) throw new Error('Missing ANTHROPIC_API_KEY.');
@@ -174,6 +178,7 @@ function getAiApiKey(provider: AIProvider): string {
 }
 
 function resolveModel(provider: AIProvider, purpose: 'research' | 'writer' | 'audit'): string {
+  if (provider === 'local') return 'local-fallback';
   if (provider === 'anthropic') {
     if (purpose === 'research') {
       return process.env.ANTHROPIC_RESEARCH_MODEL || process.env.ANTHROPIC_MODEL || 'claude-3-7-sonnet-latest';
@@ -215,6 +220,415 @@ function slugify(input: string): string {
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-');
   return base || `post-${Date.now()}`;
+}
+
+const LOCAL_SOURCE_POOL = {
+  shared: [
+    {
+      claim:
+        'Google recommends people-first content with clear expertise, accuracy, and a satisfying page experience.',
+      source: 'Google Search Central',
+      url: 'https://developers.google.com/search/docs/fundamentals/creating-helpful-content',
+    },
+    {
+      claim:
+        'Google allows AI-assisted content when quality standards are met and spam policies are respected.',
+      source: 'Google Search Central',
+      url: 'https://developers.google.com/search/docs/fundamentals/using-gen-ai-content',
+    },
+  ],
+  nonprofit: [
+    {
+      claim: 'Nonprofit online revenue increased 15 percent in 2025.',
+      source: 'M+R Benchmarks 2026',
+      url: 'https://mrbenchmarks.com/fundraising/',
+      publishedDate: '2026-03-05',
+    },
+    {
+      claim: 'Nonprofit organic search accounted for 39 percent of website sessions in 2025.',
+      source: 'M+R Benchmarks 2026',
+      url: 'https://mrbenchmarks.com/website-performance/',
+      publishedDate: '2026-03-05',
+    },
+    {
+      claim: 'Total U.S. charitable giving reached $592.50 billion in 2024.',
+      source: 'Giving USA 2025',
+      url: 'https://givingusa.org/giving-usa-2025-u-s-charitable-giving-grew-to-592-50-billion-in-2024-lifted-by-stock-market-gains/',
+      publishedDate: '2025-06-24',
+    },
+    {
+      claim:
+        'FEP reported donor counts declined while dollars increased in 2025, highlighting retention and conversion pressure.',
+      source: 'Fundraising Effectiveness Project 2025',
+      url: 'https://publications.fepreports.org/',
+      publishedDate: '2025-12-01',
+    },
+  ],
+  corporate: [
+    {
+      claim: 'Corporate trust expectations continue to rise around practical social impact and accountability.',
+      source: 'Edelman Trust Barometer 2025',
+      url: 'https://www.edelman.com/trust/2025/trust-barometer',
+      publishedDate: '2025-01-22',
+    },
+    {
+      claim: 'Corporate citizenship leaders are prioritizing focused giving, volunteer engagement, and partner effectiveness.',
+      source: 'Harvard Law School Forum, 2026 Outlook',
+      url: 'https://corpgov.law.harvard.edu/2026/02/24/2026-outlook-for-corporate-citizenship-and-philanthropy/',
+      publishedDate: '2026-02-24',
+    },
+    {
+      claim: 'CSRD requirements are evolving, and simplification initiatives are changing scope and timelines.',
+      source: 'European Commission and Council of the EU',
+      url: 'https://finance.ec.europa.eu/financial-markets/company-reporting-and-auditing/company-reporting/corporate-sustainability-reporting_en',
+      publishedDate: '2026-02-24',
+    },
+  ],
+};
+
+function toTitleCase(input: string): string {
+  return sanitizeNoEmDash(input)
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((token) => token.charAt(0).toUpperCase() + token.slice(1).toLowerCase())
+    .join(' ');
+}
+
+function truncateAtWord(input: string, max = 160): string {
+  const clean = sanitizeNoEmDash(input);
+  if (clean.length <= max) return clean;
+  const trimmed = clean.slice(0, max);
+  const lastSpace = trimmed.lastIndexOf(' ');
+  return `${(lastSpace > 0 ? trimmed.slice(0, lastSpace) : trimmed).trim()}.`;
+}
+
+function countWords(text: string): number {
+  return sanitizeNoEmDash(text).split(/\s+/).filter(Boolean).length;
+}
+
+function countWordsFromSections(sections: DraftSection[]): number {
+  let total = 0;
+  for (const section of sections) {
+    if ('items' in section) {
+      for (const item of section.items) total += countWords(item);
+      continue;
+    }
+    total += countWords(section.text);
+  }
+  return total;
+}
+
+function inferCategoryFromTopic(topic: string, fallback: string): string {
+  const lower = topic.toLowerCase();
+  if (/(donor|fundrais|stewardship|giving|retention|grant)/.test(lower)) return 'Fundraising';
+  if (/(story|narrative|impact report|annual report|communications|video)/.test(lower)) return 'Storytelling';
+  if (/(seo|search|keyword|ai search|answer engine|traffic|ranking)/.test(lower)) return 'SEO';
+  if (/(csr|corporate|citizenship|esg|sustainability|social impact|volunteer)/.test(lower)) return 'Corporate Responsibility';
+  if (/(partnership|sponsorship)/.test(lower)) return 'Partnerships';
+  return fallback;
+}
+
+function semanticKeywordsFromTopic(topic: string, keyword: string): string[] {
+  const lower = `${topic} ${keyword}`.toLowerCase();
+  const base = [
+    keyword,
+    `${keyword} strategy`,
+    `${keyword} framework`,
+    `${keyword} examples`,
+    `${keyword} best practices`,
+    `${keyword} checklist`,
+  ];
+
+  if (/(nonprofit|donor|fundrais|charity)/.test(lower)) {
+    base.push(
+      'nonprofit donor retention',
+      'nonprofit fundraising strategy',
+      'donor stewardship plan',
+      'nonprofit impact storytelling'
+    );
+  }
+
+  if (/(csr|corporate|esg|sustainability|social impact)/.test(lower)) {
+    base.push(
+      'corporate social responsibility strategy',
+      'social impact reporting',
+      'ESG communications',
+      'corporate citizenship strategy'
+    );
+  }
+
+  if (/(seo|search|ai)/.test(lower)) {
+    base.push('answer engine optimization', 'people-first content', 'search intent mapping');
+  }
+
+  const unique = Array.from(new Set(base.map((item) => sanitizeNoEmDash(item).trim()).filter(Boolean)));
+  return unique.slice(0, 12);
+}
+
+function buildLocalResearch(topic: string, keyword: string, requestedCategory: string): ResearchBrief {
+  const lower = `${topic} ${keyword}`.toLowerCase();
+  const nonprofit = /(nonprofit|donor|fundrais|charity|grant)/.test(lower);
+  const corporate = /(csr|corporate|esg|sustainability|social impact|citizenship|volunteer)/.test(lower);
+  const seo = /(seo|search|ai search|answer engine|keyword)/.test(lower);
+
+  const stats = [
+    ...LOCAL_SOURCE_POOL.shared,
+    ...(nonprofit ? LOCAL_SOURCE_POOL.nonprofit : []),
+    ...(corporate ? LOCAL_SOURCE_POOL.corporate : []),
+    ...(seo ? LOCAL_SOURCE_POOL.nonprofit.slice(0, 2) : []),
+  ].slice(0, 6);
+
+  const questionsPeopleAsk = [
+    `What is the fastest way to improve ${keyword}?`,
+    `How do teams measure whether ${keyword} is working?`,
+    `Which mistakes reduce trust when implementing ${keyword}?`,
+    `What should be included in a ${keyword} strategy in 2026?`,
+  ];
+
+  return {
+    primaryKeyword: sanitizeNoEmDash(keyword),
+    semanticKeywords: semanticKeywordsFromTopic(topic, keyword),
+    questionsPeopleAsk: questionsPeopleAsk.map(sanitizeNoEmDash),
+    stats,
+    suggestedCategory: inferCategoryFromTopic(topic, sanitizeNoEmDash(requestedCategory || 'Insights')),
+  };
+}
+
+function createLocalTitle(keyword: string, topic: string): string {
+  const key = toTitleCase(keyword);
+  const candidate = `${key}: A Practical Framework for Measurable Results`;
+  if (candidate.length >= 45 && candidate.length <= 70) return candidate;
+  const fallback = `${toTitleCase(topic)}: Practical Strategy and Execution Guide`;
+  return truncateAtWord(fallback, 70);
+}
+
+function createLongParagraph(parts: string[]): string {
+  return sanitizeNoEmDash(parts.join(' '));
+}
+
+function buildLocalDraft({
+  topic,
+  keyword,
+  category,
+  targetWords,
+  brandName,
+  tone,
+  notes,
+  research,
+}: {
+  topic: string;
+  keyword: string;
+  category: string;
+  targetWords: number;
+  brandName: string;
+  tone?: string;
+  notes?: string;
+  research: ResearchBrief;
+}): DraftPayload {
+  const title = createLocalTitle(keyword, topic);
+  const toneLine = tone || 'Direct, practical, non-hype authority.';
+  const intro = createLongParagraph([
+    `${keyword} is now a core growth and trust issue for teams working on ${topic}.`,
+    'Most organizations do not fail because they lack activity.',
+    'They fail because message, evidence, and execution are disconnected.',
+    `This guide gives a practical ${keyword} system you can implement this quarter.`,
+    'It is built for teams that need clear outcomes, tighter operations, and credible storytelling that earns action.',
+  ]);
+
+  const sections: DraftSection[] = [
+    { type: 'paragraph', text: intro },
+    {
+      type: 'h2',
+      text: `What ${keyword} requires right now`,
+    },
+    {
+      type: 'paragraph',
+      text: createLongParagraph([
+        'The environment changed.',
+        'Search behavior is shifting, trust is harder to earn, and stakeholders want evidence with context.',
+        'That means your strategy must connect three layers every month: performance data, human stories, and decision-ready communication.',
+        'When one layer is missing, momentum drops.',
+      ]),
+    },
+    {
+      type: 'paragraph',
+      text: createLongParagraph([
+        `For ${brandName} style execution, the strongest pattern is simple: define the outcome, map audience questions, collect proof, and publish in a repeatable rhythm.`,
+        'You are not trying to publish more content.',
+        'You are building a system that compounds trust and conversion.',
+        `Tone standard: ${toneLine}`,
+      ]),
+    },
+    { type: 'h2', text: `A six-step ${keyword} framework` },
+    {
+      type: 'numberList',
+      items: [
+        'Set one measurable business outcome and one audience outcome for the next 90 days.',
+        'Map your highest-intent questions by audience stage and assign each question to a content asset.',
+        'Build a proof bank with current benchmarks, internal performance data, and one human story per theme.',
+        'Publish one primary post, one derivative format, and one conversion CTA in each cycle.',
+        'Instrument conversion and trust metrics so each post can be evaluated against a clear baseline.',
+        'Run monthly optimization reviews and recycle top-performing content into updated pillar assets.',
+      ],
+    },
+    { type: 'h3', text: 'Step 1: Define the scorecard before drafting' },
+    {
+      type: 'paragraph',
+      text: createLongParagraph([
+        'Start by choosing the one outcome that matters most this quarter.',
+        'That might be donor retention, qualified partnership calls, recurring support, or reporting confidence from leadership.',
+        'Then define the supporting trust signal you need to improve.',
+        'Examples include email reply rate, consultation requests from target accounts, return visitor depth, or internal stakeholder confidence.',
+        'Without this scorecard, content decisions drift toward opinions instead of outcomes.',
+      ]),
+    },
+    { type: 'h3', text: 'Step 2: Build an evidence loop, not a one-time report' },
+    {
+      type: 'paragraph',
+      text: createLongParagraph([
+        'Create a lightweight evidence loop that runs every month.',
+        'Capture one quantitative data point, one qualitative quote, one field observation, and one implementation lesson.',
+        'Then connect those inputs to a single narrative thread your audience can follow.',
+        'This loop reduces content bottlenecks and gives your team a stronger base for blog posts, donor updates, board decks, and partner communication.',
+      ]),
+    },
+    { type: 'h3', text: 'Step 3: Publish in a fixed cadence with conversion intent' },
+    {
+      type: 'paragraph',
+      text: createLongParagraph([
+        'Set a stable cadence that your team can sustain.',
+        'For most teams, one substantial post every two to four weeks is enough when each piece targets a real decision point.',
+        'Pair every post with one clear CTA and one next action.',
+        'If a reader finishes your article and still does not know what to do next, conversion will remain weak no matter how good the writing is.',
+      ]),
+    },
+    { type: 'h2', text: 'Common mistakes that weaken results' },
+    {
+      type: 'bulletList',
+      items: [
+        'Publishing broad educational content with no defined audience or stage.',
+        'Using outdated benchmark numbers that reduce credibility with informed readers.',
+        'Writing aspirational narratives without concrete actions, timeline, or ownership.',
+        'Skipping conversion design, especially CTA placement and internal link strategy.',
+        'Treating reporting as a year-end event instead of an ongoing operating system.',
+        'Optimizing for volume instead of trust, proof quality, and decision relevance.',
+      ],
+    },
+    { type: 'h2', text: 'What to measure every month' },
+    {
+      type: 'bulletList',
+      items: [
+        'Primary conversion KPI tied to the post objective.',
+        'Assisted conversion paths from blog to consultation, donation, or partner inquiry.',
+        'Search visibility for the target keyword and two semantic variations.',
+        'Scroll depth and engaged time to confirm content usefulness.',
+        'Returning visitor rate for readers entering through the post cluster.',
+        'Quality signals from stakeholders, including replies, partner feedback, and content reuse requests.',
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: createLongParagraph([
+        'Execution consistency beats occasional hero campaigns.',
+        `If your team applies this ${keyword} structure with monthly discipline, you will improve both discoverability and trust.`,
+        'Keep refining the inputs, update examples with fresh data, and maintain a clear next step for readers at every stage.',
+        notes ? `Additional implementation note: ${sanitizeNoEmDash(notes)}` : '',
+      ]),
+    },
+  ];
+
+  while (countWordsFromSections(sections) < targetWords) {
+    sections.push({
+      type: 'paragraph',
+      text: createLongParagraph([
+        `Implementation note for ${keyword}:`,
+        'review your highest-performing page each month, capture what changed, and replicate that pattern in your next post.',
+        'This creates a practical learning system that compounds results over time and improves editorial confidence across the team.',
+      ]),
+    });
+  }
+
+  const excerpt = truncateAtWord(
+    `${keyword} is most effective when strategy, evidence, and execution are connected. Use this practical framework to improve trust, conversion, and measurable outcomes.`,
+    220
+  );
+  const seoTitle = truncateAtWord(`${toTitleCase(keyword)} Strategy: Practical Framework for Better Results`, 70);
+  const metaDescription = truncateAtWord(
+    `Learn a practical ${keyword} framework with clear steps, common mistakes, KPIs, and execution guidance for teams that need measurable trust and conversion outcomes.`,
+    160
+  );
+
+  return {
+    title,
+    slug: slugify(`${keyword} ${topic}`),
+    category,
+    tags: research.semanticKeywords.slice(0, 8),
+    excerpt,
+    seoTitle,
+    metaDescription,
+    faq: [
+      {
+        question: `What is the first step to improve ${keyword}?`,
+        answer:
+          'Define the outcome and baseline first, then map audience questions and build content around evidence and specific next actions.',
+      },
+      {
+        question: `How long does a ${keyword} strategy take to show results?`,
+        answer:
+          'Most teams see early signal changes in 4 to 8 weeks, with stronger compounding outcomes over 8 to 16 weeks when cadence and optimization are consistent.',
+      },
+      {
+        question: `How should teams measure ${keyword} performance?`,
+        answer:
+          'Track conversion KPIs, assisted paths, search visibility, engagement depth, and recurring trust signals from stakeholders.',
+      },
+    ],
+    sections,
+    cta: {
+      heading: 'Need help turning this framework into execution?',
+      text: 'Get a focused strategy plan and implementation path built for your team.',
+      buttonLabel: 'Book a Strategy Call',
+      variant: 'primary',
+    },
+    sidebar: {
+      title: 'Resources',
+      imageCta: {
+        heading: 'Need a faster path?',
+        body: 'Use this framework with expert guidance and clear priorities for your next 90 days.',
+        buttonLabel: 'Book a Call',
+      },
+      promo: {
+        eyebrow: 'Start Here',
+        heading: 'Get the Impact Story Diagnostic',
+        body: 'See where message, proof, and conversion are leaking momentum.',
+        buttonLabel: 'Run the Diagnostic',
+      },
+      newsletter: {
+        title: 'Stay in the Loop',
+        body: 'Get practical strategy notes and examples each week.',
+        buttonLabel: 'Subscribe',
+      },
+      trendingTitle: 'Trending Topics',
+    },
+  };
+}
+
+function shouldFallbackToLocal(error: unknown): boolean {
+  const message =
+    error instanceof Error ? error.message.toLowerCase() : sanitizeNoEmDash(String(error || '')).toLowerCase();
+
+  return (
+    message.includes('credit balance') ||
+    message.includes('insufficient_quota') ||
+    message.includes('rate limit') ||
+    message.includes('unauthorized') ||
+    message.includes('api key') ||
+    message.includes('session not found') ||
+    message.includes('model') ||
+    message.includes('timeout') ||
+    message.includes('network') ||
+    message.includes('fetch failed')
+  );
 }
 
 function extractOutputText(payload: unknown): string {
@@ -449,6 +863,7 @@ function evaluateQuality(draft: DraftPayload, keyword: string, minWords: number)
     .trim();
   const words = body.split(/\s+/).filter(Boolean).length;
   const headingCount = draft.sections.filter((section) => section.type === 'h2' || section.type === 'h3').length;
+  const listCount = draft.sections.filter((section) => section.type === 'bulletList' || section.type === 'numberList').length;
   const first200 = body.split(/\s+/).slice(0, 200).join(' ').toLowerCase();
   const lowered = [draft.title, draft.seoTitle, draft.metaDescription, draft.excerpt, body].join(' ').toLowerCase();
 
@@ -457,6 +872,10 @@ function evaluateQuality(draft: DraftPayload, keyword: string, minWords: number)
   if (draft.metaDescription.length < 130 || draft.metaDescription.length > 160) issues.push('Meta description should be 130-160 characters.');
   if (words < minWords) issues.push(`Body should be at least ${minWords} words.`);
   if (headingCount < 3) issues.push('Body should include at least three section headings.');
+  if (listCount < 1) issues.push('Body should include at least one checklist, process, or tactical list.');
+  if (draft.faq.length < 2) issues.push('Include at least two FAQ entries.');
+  if (!draft.cta?.heading || !draft.cta?.buttonLabel) issues.push('Include one relevant CTA block.');
+  if (!draft.sidebar?.promo && !draft.sidebar?.imageCta) issues.push('Include sidebar CTA or promo guidance.');
   if (keyword && !draft.title.toLowerCase().includes(keyword.toLowerCase())) issues.push('Primary keyword is missing from title.');
   if (keyword && !first200.includes(keyword.toLowerCase())) issues.push('Primary keyword should appear in the first 200 words.');
   if (/\u2014/.test(lowered)) issues.push('No em dashes allowed.');
@@ -607,7 +1026,7 @@ function buildLinks({
   return { expectedLiveUrl, localViewUrl, studioEditUrl };
 }
 
-function toPortableText(draft: DraftPayload): PortableTextNode[] {
+function toPortableText(draft: DraftPayload, research?: ResearchBrief): PortableTextNode[] {
   const blocks: PortableTextNode[] = [];
   for (const section of draft.sections) {
     if ('items' in section) {
@@ -651,6 +1070,42 @@ function toPortableText(draft: DraftPayload): PortableTextNode[] {
       variant: draft.cta.variant || 'primary',
       utmCampaign: draft.cta.utmCampaign,
     });
+  }
+
+  const sourceRows = (research?.stats ?? [])
+    .filter((row) => row.source && row.url)
+    .slice(0, 5);
+
+  if (sourceRows.length > 0) {
+    blocks.push({
+      _type: 'block',
+      _key: key('blk'),
+      style: 'h2',
+      markDefs: [],
+      children: [{ _type: 'span', _key: key('spn'), text: 'Sources and further reading', marks: [] }],
+    });
+
+    for (const row of sourceRows) {
+      const markKey = key('lnk');
+      const sourceText = sanitizeNoEmDash(row.source);
+      const claimText = sanitizeNoEmDash(row.claim);
+      blocks.push({
+        _type: 'block',
+        _key: key('blk'),
+        style: 'normal',
+        listItem: 'bullet',
+        level: 1,
+        markDefs: [{ _key: markKey, _type: 'link', href: row.url, openInNewTab: true }],
+        children: [
+          {
+            _type: 'span',
+            _key: key('spn'),
+            text: claimText ? `${sourceText}: ${claimText}` : sourceText,
+            marks: [markKey],
+          },
+        ],
+      });
+    }
   }
 
   return blocks;
@@ -754,6 +1209,7 @@ async function saveDraftToSanity(
   authorId: string,
   sidebarModules: unknown[],
   sidebarTitle: string,
+  research: ResearchBrief,
   automationMeta: {
     targetKeyword: string;
     quality: QualityReport;
@@ -776,7 +1232,7 @@ async function saveDraftToSanity(
     title: draft.title,
     slug: { _type: 'slug', current: draft.slug },
     excerpt: draft.excerpt,
-    body: toPortableText(draft),
+    body: toPortableText(draft, research),
     brand,
     author: { _type: 'reference', _ref: authorId },
     category: draft.category,
@@ -794,6 +1250,12 @@ async function saveDraftToSanity(
       targetKeyword: automationMeta.targetKeyword,
       quality: automationMeta.quality,
       rankingEstimate: automationMeta.rankingEstimate,
+      sources: research.stats.map((row) => ({
+        claim: row.claim,
+        source: row.source,
+        url: row.url,
+        publishedDate: row.publishedDate,
+      })),
     },
   });
 
@@ -995,84 +1457,123 @@ export async function publishAutoBlog(input: PublishAutoBlogRequest): Promise<Pu
 export async function generateAutoBlog(input: GenerateAutoBlogRequest): Promise<GenerateAutoBlogResult> {
   if (!input.topic?.trim()) throw new Error('Missing topic.');
   const provider = getAiProvider();
-  const apiKey = getAiApiKey(provider);
-  const researchModel = resolveModel(provider, 'research');
-  const writerModel = resolveModel(provider, 'writer');
-  const auditModel = resolveModel(provider, 'audit');
-
   const brand = getBrand(input.brand);
   const client = getWriteClient();
   const keyword = sanitizeNoEmDash(input.targetKeyword || input.topic);
   const requestedCategory = sanitizeNoEmDash(input.category || 'Insights');
   const thresholds = resolveQualityThresholds(input.minSeoScore, input.minToneScore);
   const internalLinks = await getInternalLinks(client, input.brand);
+  const targetWords = Math.max(900, Math.min(2600, input.targetWordCount ?? 1300));
+  const researchModel = resolveModel(provider, 'research');
+  const writerModel = resolveModel(provider, 'writer');
+  const auditModel = resolveModel(provider, 'audit');
 
-  const research = normalizeResearch(
-    await callAiJson<Partial<ResearchBrief>>({
-      provider,
-      apiKey,
-      model: researchModel,
-      systemPrompt:
-        'You are a senior SEO researcher. Return strict JSON only: {primaryKeyword,semanticKeywords,questionsPeopleAsk,stats:[{claim,source,url,publishedDate}],suggestedCategory}. No markdown.',
-      userPrompt: [
-        `Brand: ${brand.name}`,
-        `Topic: ${input.topic}`,
-        `Keyword: ${keyword}`,
-        `Suggested category: ${requestedCategory}`,
-        input.notes ? `Notes: ${input.notes}` : '',
-      ]
-        .filter(Boolean)
-        .join('\n'),
-      useWebSearch: process.env.OPENAI_ENABLE_WEB_SEARCH !== 'false',
-    }),
-    keyword,
-    requestedCategory
-  );
+  let generationMode: GenerationMode = provider === 'local' ? 'local' : 'ai';
+  let research: ResearchBrief;
+  let auditedDraft: DraftPayload;
 
-  const firstDraft = normalizeDraft(
-    await callAiJson<Partial<DraftPayload>>({
-      provider,
-      apiKey,
-      model: writerModel,
-      systemPrompt: [
-        'You are a senior human editorial writer and SEO operator.',
-        'Return strict JSON only in this shape:',
-        '{title,slug,category,tags,excerpt,seoTitle,metaDescription,faq:[{question,answer}],sections:[{type,text}|{type,items}],cta,sidebar}.',
-        'Hard rules: no em dashes and no generic AI phrases.',
-      ].join('\n'),
-      userPrompt: [
-        `Brand: ${brand.name}`,
-        `Tone: ${input.tone || brand.tagline}`,
-        `Topic: ${input.topic}`,
-        `Keyword: ${keyword}`,
-        `Target category: ${input.category || research.suggestedCategory}`,
-        `Target words: ${Math.max(900, Math.min(2600, input.targetWordCount ?? 1300))}`,
-        `Primary CTA URL: ${brand.cta.primary.href}`,
-        `Secondary CTA URL: ${brand.cta.secondary.href}`,
-        `Internal links: ${internalLinks.map((row) => `/blog/${row.slug}`).join(', ') || 'none'}`,
-        `Research: ${JSON.stringify(research)}`,
-        input.notes ? `Extra notes: ${input.notes}` : '',
-      ]
-        .filter(Boolean)
-        .join('\n'),
-    }),
-    input.topic,
-    input.category || research.suggestedCategory
-  );
+  if (provider === 'local') {
+    research = buildLocalResearch(input.topic, keyword, requestedCategory);
+    auditedDraft = buildLocalDraft({
+      topic: input.topic,
+      keyword,
+      category: input.category || research.suggestedCategory,
+      targetWords,
+      brandName: brand.name,
+      tone: input.tone || brand.tagline,
+      notes: input.notes,
+      research,
+    });
+  } else {
+    const apiKey = getAiApiKey(provider);
+    try {
+      research = normalizeResearch(
+        await callAiJson<Partial<ResearchBrief>>({
+          provider,
+          apiKey,
+          model: researchModel,
+          systemPrompt:
+            'You are a senior SEO researcher for nonprofit, CSR, ESG, and impact communications content. Return strict JSON only: {primaryKeyword,semanticKeywords,questionsPeopleAsk,stats:[{claim,source,url,publishedDate}],suggestedCategory}. Prioritize current, reputable sources for benchmarks, regulations, platform changes, and trend claims. No markdown.',
+          userPrompt: [
+            `Brand: ${brand.name}`,
+            `Topic: ${input.topic}`,
+            `Keyword: ${keyword}`,
+            `Suggested category: ${requestedCategory}`,
+            input.notes ? `Notes: ${input.notes}` : '',
+          ]
+            .filter(Boolean)
+            .join('\n'),
+          useWebSearch: process.env.OPENAI_ENABLE_WEB_SEARCH !== 'false',
+        }),
+        keyword,
+        requestedCategory
+      );
 
-  const firstQuality = evaluateQuality(firstDraft, keyword, Math.max(900, Math.min(2600, input.targetWordCount ?? 1300)));
-  const auditedDraft = normalizeDraft(
-    await callAiJson<Partial<DraftPayload>>({
-      provider,
-      apiKey,
-      model: auditModel,
-      systemPrompt:
-        'You are an SEO and editorial QA lead. Fix issues and return the same JSON shape. Keep no em dashes and no AI-sounding phrasing.',
-      userPrompt: `Draft JSON:\n${JSON.stringify(firstDraft)}\nIssues:\n${firstQuality.issues.join('\n') || 'none'}`,
-    }),
-    firstDraft.title,
-    firstDraft.category
-  );
+      const firstDraft = normalizeDraft(
+        await callAiJson<Partial<DraftPayload>>({
+          provider,
+          apiKey,
+          model: writerModel,
+          systemPrompt: [
+            'You are a senior human editorial writer and SEO operator.',
+            'Return strict JSON only in this shape:',
+            '{title,slug,category,tags,excerpt,seoTitle,metaDescription,faq:[{question,answer}],sections:[{type,text}|{type,items}],cta,sidebar}.',
+            'Required structure: search-intent intro, answer summary, evidence section, tactical framework, mistakes or risks, measurement/KPI section, CTA, and FAQ.',
+            'Each draft must include at least one tactical checklist or numbered process, at least two FAQ entries, one CTA block, and sidebar guidance with imageCta or promo.',
+            'For Impact Loop, write as an evidence-backed impact storytelling and communications operator. Keep the brand practical, trust-building, and non-hype.',
+            'Hard rules: no em dashes and no generic AI phrases.',
+          ].join('\n'),
+          userPrompt: [
+            `Brand: ${brand.name}`,
+            `Tone: ${input.tone || brand.tagline}`,
+            `Topic: ${input.topic}`,
+            `Keyword: ${keyword}`,
+            `Target category: ${input.category || research.suggestedCategory}`,
+            `Target words: ${targetWords}`,
+            `Primary CTA URL: ${brand.cta.primary.href}`,
+            `Secondary CTA URL: ${brand.cta.secondary.href}`,
+            `Internal links: ${internalLinks.map((row) => `/blog/${row.slug}`).join(', ') || 'none'}`,
+            `Research: ${JSON.stringify(research)}`,
+            'Create an article that can fit a two-column editorial blog template with a sticky sidebar. Sidebar copy should be specific to the post and conversion CTA.',
+            input.notes ? `Extra notes: ${input.notes}` : '',
+          ]
+            .filter(Boolean)
+            .join('\n'),
+        }),
+        input.topic,
+        input.category || research.suggestedCategory
+      );
+
+      const firstQuality = evaluateQuality(firstDraft, keyword, targetWords);
+      auditedDraft = normalizeDraft(
+        await callAiJson<Partial<DraftPayload>>({
+          provider,
+          apiKey,
+          model: auditModel,
+          systemPrompt:
+            'You are an SEO and editorial QA lead. Fix issues and return the same JSON shape. Preserve the required article structure, CTA, sidebar guidance, at least one tactical list, and at least two FAQ entries. Keep no em dashes and no AI-sounding phrasing.',
+          userPrompt: `Draft JSON:\n${JSON.stringify(firstDraft)}\nIssues:\n${firstQuality.issues.join('\n') || 'none'}`,
+        }),
+        firstDraft.title,
+        firstDraft.category
+      );
+    } catch (error) {
+      const allowFallback = process.env.AI_AUTOBLOG_ALLOW_LOCAL_FALLBACK !== 'false';
+      if (!allowFallback || !shouldFallbackToLocal(error)) throw error;
+      generationMode = 'local';
+      research = buildLocalResearch(input.topic, keyword, requestedCategory);
+      auditedDraft = buildLocalDraft({
+        topic: input.topic,
+        keyword,
+        category: input.category || research.suggestedCategory,
+        targetWords,
+        brandName: brand.name,
+        tone: input.tone || brand.tagline,
+        notes: input.notes,
+        research,
+      });
+    }
+  }
 
   const finalDraft = {
     ...auditedDraft,
@@ -1083,7 +1584,18 @@ export async function generateAutoBlog(input: GenerateAutoBlogRequest): Promise<
     seoTitle: sanitizeNoEmDash(auditedDraft.seoTitle),
     metaDescription: sanitizeNoEmDash(auditedDraft.metaDescription),
   };
-  const finalQuality = evaluateQuality(finalDraft, keyword, Math.max(900, Math.min(2600, input.targetWordCount ?? 1300)));
+
+  if (!finalDraft.cta?.buttonHref && finalDraft.cta) {
+    finalDraft.cta = { ...finalDraft.cta, buttonHref: brand.cta.primary.href };
+  }
+  if (finalDraft.sidebar?.promo && !finalDraft.sidebar.promo.buttonHref) {
+    finalDraft.sidebar.promo = { ...finalDraft.sidebar.promo, buttonHref: brand.cta.primary.href };
+  }
+  if (finalDraft.sidebar?.imageCta && !finalDraft.sidebar.imageCta.buttonHref) {
+    finalDraft.sidebar.imageCta = { ...finalDraft.sidebar.imageCta, buttonHref: brand.cta.primary.href };
+  }
+
+  const finalQuality = evaluateQuality(finalDraft, keyword, targetWords);
   const finalAnalysis = analyzeDraft(finalDraft);
   const rankingEstimate = buildRankingEstimate({
     quality: finalQuality,
@@ -1099,6 +1611,7 @@ export async function generateAutoBlog(input: GenerateAutoBlogRequest): Promise<
       title: finalDraft.title,
       slug: finalDraft.slug || slugify(finalDraft.title),
       category: finalDraft.category,
+      generationMode,
       published: false,
       quality: finalQuality,
       qualityGate,
@@ -1128,6 +1641,7 @@ export async function generateAutoBlog(input: GenerateAutoBlogRequest): Promise<
     authorId,
     sidebarModules,
     finalDraft.sidebar?.title || 'Resources',
+    research,
     {
       targetKeyword: keyword,
       quality: finalQuality,
@@ -1165,6 +1679,7 @@ export async function generateAutoBlog(input: GenerateAutoBlogRequest): Promise<
     title: finalDraft.title,
     slug: finalDraft.slug || slugify(finalDraft.title),
     category: finalDraft.category,
+    generationMode,
     draftId,
     publishedId,
     published,

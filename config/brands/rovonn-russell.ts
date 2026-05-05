@@ -5,13 +5,17 @@ import type { BrandConfig } from '../brand.types';
  * Mirrors rovonnrussell.com: warm cream backgrounds, charcoal primary,
  * warm orange + gold accents, Playfair Display + DM Sans.
  * Editorial magazine aesthetic, authority-driven.
+ *
+ * Positioning (post-May-2026 reposition): Storytelling + Systems brand for
+ * founders, creators, and impact-driven leaders. Personal brand teaches
+ * frameworks (including ADAPT); Impact Loop delivers org engagements.
  */
 export const rovonnRussellBrand: BrandConfig = {
   key: 'rovonn-russell',
   name: 'Rovonn Russell',
-  tagline: 'Impact Story Architect',
+  tagline: 'Storytelling + Systems',
   description:
-    'Essays and frameworks on impact storytelling, narrative architecture, and building systems that make mission-driven work impossible to ignore.',
+    'Essays, frameworks, and field notes on storytelling, content systems, and practical AI for founders, creators, and impact-driven leaders.',
   domain: 'blog.rovonnrussell.com',
   mainSiteUrl: 'https://rovonnrussell.com',
   locale: 'en-CA',
@@ -23,19 +27,19 @@ export const rovonnRussellBrand: BrandConfig = {
   },
   nav: [
     { label: 'Rovonn Russell', href: 'https://rovonnrussell.com' },
-    { label: 'Frameworks', href: 'https://rovonnrussell.com/frameworks' },
+    { label: 'Start Here', href: 'https://rovonnrussell.com/start-here' },
+    { label: 'Resources', href: 'https://rovonnrussell.com/resources' },
     { label: 'Speaking', href: 'https://rovonnrussell.com/speaking' },
-    { label: 'Diagnostic', href: 'https://rovonnrussell.com/diagnostic' },
     { label: 'Work With Me', href: 'https://rovonnrussell.com/work-with-me' },
   ],
   cta: {
     primary: {
-      text: 'Book a Strategy Session',
-      href: 'https://rovonnrussell.com/work-with-me',
+      text: 'Get the Visibility Starter Kit',
+      href: 'https://rovonnrussell.com/resources/visibility-starter-kit',
     },
     secondary: {
-      text: 'Explore the 5-Pillar Framework',
-      href: 'https://rovonnrussell.com/frameworks',
+      text: 'Work With Rovonn',
+      href: 'https://rovonnrussell.com/work-with-me',
     },
   },
   social: {

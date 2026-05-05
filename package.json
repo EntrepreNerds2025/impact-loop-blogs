@@ -12,6 +12,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "sync:crm-catalog": "node scripts/sync-blog-catalog.mjs",
     "type-check": "tsc --noEmit",
     "studio:dev": "cd studio && npx sanity dev",
     "studio:build": "cd studio && npx sanity build",

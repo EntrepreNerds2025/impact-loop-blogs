@@ -113,7 +113,7 @@ export interface SidebarPromoModule {
   _type: 'sidebarPromo';
   _key: string;
   eyebrow?: string;
-  heading: string;
+  heading?: string;
   body?: string;
   buttonLabel?: string;
   buttonHref?: string;

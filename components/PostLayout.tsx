@@ -30,6 +30,11 @@ export default function PostLayout({
   const json = articleJsonLd(post);
   const authorLabel = fm.authorName ?? post.authorProfile?.name ?? fm.author;
   const authorSlug = post.authorProfile?.slug ?? fm.author;
+  const formattedDate = new Date(fm.date).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
 
   return (
     <article>
@@ -68,13 +73,7 @@ export default function PostLayout({
               {authorLabel}
             </Link>
             <span aria-hidden>|</span>
-            <time dateTime={fm.date}>
-              {new Date(fm.date).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              })}
-            </time>
+            <time dateTime={fm.date}>{formattedDate}</time>
             <span aria-hidden>|</span>
             <span>{post.readingTime}</span>
           </div>
@@ -83,24 +82,43 @@ export default function PostLayout({
 
       <div className="bg-brand-surface/60">
         <div className="mx-auto max-w-6xl px-4 py-8 md:py-10">
-          <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
-            <div className="space-y-8 rounded-2xl border border-brand-border bg-brand-bg p-5 md:p-8">
+          <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="overflow-hidden rounded-[1.75rem] border border-brand-border bg-brand-bg shadow-[0_24px_80px_hsl(var(--brand-text)/0.08)]">
               {fm.featuredImage && (
-                <Image
-                  src={fm.featuredImage}
-                  alt={fm.featuredImageAlt ?? fm.title}
-                  width={1600}
-                  height={900}
-                  className="h-auto w-full rounded-xl"
-                  priority
-                />
+                <div className="bg-brand-muted">
+                  <Image
+                    src={fm.featuredImage}
+                    alt={fm.featuredImageAlt ?? fm.title}
+                    width={1600}
+                    height={900}
+                    className="h-auto w-full object-cover"
+                    priority
+                  />
+                </div>
               )}
 
-              <div className="prose-brand">{children}</div>
-              <ShareButtons slug={fm.slug} title={fm.title} />
-              {fm.faq && fm.faq.length > 0 && <FAQSchema items={fm.faq} />}
-              <AuthorBio authorSlug={authorSlug} author={post.authorProfile} />
-              <CTABlock variant="secondary" />
+              <div className="grid border-b border-brand-border bg-brand-surface text-center text-[11px] uppercase tracking-[0.16em] text-brand-text-muted sm:grid-cols-3">
+                <div className="border-b border-brand-border px-4 py-3 sm:border-b-0 sm:border-r">
+                  <span className="block font-semibold text-brand-text">Category</span>
+                  <span>{fm.category}</span>
+                </div>
+                <div className="border-b border-brand-border px-4 py-3 sm:border-b-0 sm:border-r">
+                  <span className="block font-semibold text-brand-text">Updated</span>
+                  <time dateTime={fm.date}>{formattedDate}</time>
+                </div>
+                <div className="px-4 py-3">
+                  <span className="block font-semibold text-brand-text">Read Time</span>
+                  <span>{post.readingTime}</span>
+                </div>
+              </div>
+
+              <div className="space-y-8 p-5 md:p-8">
+                <div className="prose-brand">{children}</div>
+                <ShareButtons slug={fm.slug} title={fm.title} />
+                {fm.faq && fm.faq.length > 0 && <FAQSchema items={fm.faq} />}
+                <AuthorBio authorSlug={authorSlug} author={post.authorProfile} />
+                <CTABlock variant="secondary" />
+              </div>
             </div>
 
             <PostSidebar
@@ -128,4 +146,3 @@ export default function PostLayout({
     </article>
   );
 }
-

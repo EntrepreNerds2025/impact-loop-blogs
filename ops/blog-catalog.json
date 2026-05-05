@@ -1,0 +1,99 @@
+[
+  {
+    "brand_key": "impact-loop",
+    "source_system": "workspace_sync_script",
+    "source_path": "content/impact-loop/why-57-percent-of-nonprofit-video-viewers-donate.mdx",
+    "local_path": "content/impact-loop/why-57-percent-of-nonprofit-video-viewers-donate.mdx",
+    "title": "Why 57% of Nonprofit Video Viewers Donate (And How To Earn That Trust)",
+    "slug": "why-57-percent-of-nonprofit-video-viewers-donate",
+    "excerpt": "Video moves donors more than any other format on the web. Here is why — and the three structural choices that separate the videos that convert from the ones that get ignored.",
+    "category": "Storytelling",
+    "tags": [
+      "nonprofit",
+      "video",
+      "fundraising",
+      "storytelling"
+    ],
+    "author_name": "rovonn-russell",
+    "publish_state": "published",
+    "is_published": true,
+    "live_url": "https://blog.impactloop.ca/blog/why-57-percent-of-nonprofit-video-viewers-donate",
+    "reading_time": "3 min read",
+    "published_at": "2026-04-07",
+    "view_count": 0,
+    "unique_view_count": 0,
+    "comment_count": 0,
+    "reaction_count": 0,
+    "metadata": {
+      "workspace_snapshot": true,
+      "metrics_pending": true,
+      "featured_image": "/posts/impact-loop/nonprofit-video-hero.jpg",
+      "meta_description": "Research shows 57% of people who watch a nonprofit video go on to donate. Here is the structural reason why, and how to build videos that earn that trust."
+    }
+  },
+  {
+    "brand_key": "rovonn-russell",
+    "source_system": "workspace_sync_script",
+    "source_path": "content/rovonn-russell/lessons-from-building-15-ai-agents.mdx",
+    "local_path": "content/rovonn-russell/lessons-from-building-15-ai-agents.mdx",
+    "title": "What I Learned Building 15 AI Agents for a Storytelling Company",
+    "slug": "lessons-from-building-15-ai-agents",
+    "excerpt": "Fifteen agents in, here is what actually held up — and the three architectural mistakes I had to unlearn before any of it became reliable enough to run a business on.",
+    "category": "Systems",
+    "tags": [
+      "ai",
+      "agents",
+      "automation",
+      "storytelling",
+      "lessons"
+    ],
+    "author_name": "rovonn-russell",
+    "publish_state": "published",
+    "is_published": true,
+    "live_url": "https://blog.rovonnrussell.com/blog/lessons-from-building-15-ai-agents",
+    "reading_time": "4 min read",
+    "published_at": "2026-04-07",
+    "view_count": 0,
+    "unique_view_count": 0,
+    "comment_count": 0,
+    "reaction_count": 0,
+    "metadata": {
+      "workspace_snapshot": true,
+      "metrics_pending": true,
+      "featured_image": "/posts/rovonn-russell/15-agents-hero.jpg",
+      "meta_description": "After shipping 15 production AI agents at Impact Loop, here are the architectural decisions that actually held up — and the ones I had to unlearn fast."
+    }
+  },
+  {
+    "brand_key": "dream-streams",
+    "source_system": "workspace_sync_script",
+    "source_path": "content/dream-streams/wedding-livestreaming-ontario-2026-guide.mdx",
+    "local_path": "content/dream-streams/wedding-livestreaming-ontario-2026-guide.mdx",
+    "title": "Wedding Livestreaming in Ontario: The Complete 2026 Guide",
+    "slug": "wedding-livestreaming-ontario-2026-guide",
+    "excerpt": "Everything Ontario couples need to know about livestreaming their wedding in 2026: what it costs, what venues require, and what actually matters when grandma is watching from across the country.",
+    "category": "Weddings",
+    "tags": [
+      "wedding",
+      "livestream",
+      "ontario",
+      "ceremony"
+    ],
+    "author_name": "rovonn-russell",
+    "publish_state": "published",
+    "is_published": true,
+    "live_url": "https://blog.dreamstreams.ca/blog/wedding-livestreaming-ontario-2026-guide",
+    "reading_time": "4 min read",
+    "published_at": "2026-04-07",
+    "view_count": 0,
+    "unique_view_count": 0,
+    "comment_count": 0,
+    "reaction_count": 0,
+    "metadata": {
+      "workspace_snapshot": true,
+      "metrics_pending": true,
+      "featured_image": "/posts/dream-streams/ontario-wedding-livestream-hero.jpg",
+      "meta_description": "The complete 2026 guide to livestreaming a wedding in Ontario — costs, venue requirements, audio setup, and how to make remote guests actually feel present."
+    }
+  }
+]
